@@ -63,4 +63,16 @@ final class CSVEncoderTests: XCTestCase {
             """)
     }
 
+    func testManualHeader() {
+        let encoder = CSVEncoder()
+        encoder.dateEncodingStragegy = .iso8601
+        let data = try! encoder.encode(rows: [Test()], headers: ["a", "b", "c", "d", "e"])
+        let string = String(data: data, encoding: .utf8)
+        XCTAssertEqual(string, """
+            a,b,c,d,e
+            String,123,123.456,true,2001-01-01T00:00:00Z
+
+            """)
+    }
+
 }

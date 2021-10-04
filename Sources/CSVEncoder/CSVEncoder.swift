@@ -11,8 +11,9 @@ public class CSVEncoder: Encoder {
     internal lazy var dateFormatter: Formatter = makeDateFormatter()
     
     private var data: Data
-    var headings: [String]
-    var fields: [String]
+    private var fields: [String]
+
+    var headers: [String]
     
     enum DateEncodingStrategy {
         case deferredToDate
@@ -42,10 +43,10 @@ public class CSVEncoder: Encoder {
         self.fields = []
         self.data = Data()
         if let headings = headings {
-            self.headings = headings
+            self.headers = headings
             self.headerEncodingStrategy = headings.count == 0 ? .none : .manual
         } else {
-            self.headings = []
+            self.headers = []
             self.headerEncodingStrategy = .auto
         }
         self.dateEncodingStragegy = .deferredToDate
@@ -68,13 +69,18 @@ public class CSVEncoder: Encoder {
         }
     }
     
-    public func encode<T: Encodable>(rows: T) throws -> Data {
+    public func encode<T: Encodable>(rows: T, headers: [String]? = nil) throws -> Data {
+        if let headers = headers {
+            self.headers = headers
+            self.headerEncodingStrategy = headers.count == 0 ? .none : .manual
+        }
+
         try rows.encode(to: self)
         
         var result = Data()
         
         if headerEncodingStrategy != .none {
-            let header = self.headings.joined(separator: ",")
+            let header = self.headers.joined(separator: ",")
             if let data = "\(header)\n".data(using: .utf8) {
                 result.append(data)
             }
@@ -103,6 +109,14 @@ public class CSVEncoder: Encoder {
         }
     }
 
+    func writeHeader(_ header: String) {
+        if headers.contains(header) {
+            headerEncodingStrategy = .manual // stop recording headers when we encounter a duplicate, on the assumption that they should be unique
+        } else {
+            headers.append(header)
+        }
+    }
+    
     func writeField(_ field: String) {
         fields.append(field)
     }

@@ -20,11 +20,7 @@ struct CSVKeyedEncodingContainer<K>: KeyedEncodingContainerProtocol where K: Cod
     
     mutating func encode<T>(_ value: T, forKey key: K) throws where T : Encodable {
         if encoder.headerEncodingStrategy == .auto {
-            if encoder.headings.contains(key.stringValue) {
-                encoder.headerEncodingStrategy = .manual
-            } else {
-                encoder.headings.append(key.stringValue)
-            }
+            encoder.writeHeader(key.stringValue)
         }
         
         if let date = value as? Date {
