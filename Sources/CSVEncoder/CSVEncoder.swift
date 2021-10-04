@@ -8,36 +8,63 @@ import Foundation
 public class CSVEncoder: Encoder {
     public var codingPath: [CodingKey] = []
     public var userInfo: [CodingUserInfoKey : Any] = [:]
-    internal let dateFormatter: DateFormatter
+    internal lazy var dateFormatter: Formatter = makeDateFormatter()
     
     private var data: Data
     var headings: [String]
     var fields: [String]
     
-    enum HeadingMode {
-        case unfilled
-        case filled
+    enum DateEncodingStrategy {
+        case deferredToDate
+        case secondsSince1970
+        case millisecondsSince1970
+        case iso8601
+        case custom(DateFormatter)
+    }
+    
+    enum HeaderEncodingStrategy {
+        case none
+        case auto
+        case manual
     }
 
-    var headingMode: HeadingMode
+    var headerEncodingStrategy: HeaderEncodingStrategy
+    var dateEncodingStragegy: DateEncodingStrategy
 
-    public static var dateFormatter: DateFormatter = {
+    public static var dateFormatter: Formatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.sss"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         return formatter
     }()
     
-    public init(headings: [String]? = nil, dateFormatter: DateFormatter = CSVEncoder.dateFormatter) {
-        self.dateFormatter = dateFormatter
+    public init(headings: [String]? = nil) {
         self.fields = []
         self.data = Data()
         if let headings = headings {
             self.headings = headings
-            self.headingMode = .filled
+            self.headerEncodingStrategy = headings.count == 0 ? .none : .manual
         } else {
             self.headings = []
-            self.headingMode = .unfilled
+            self.headerEncodingStrategy = .auto
+        }
+        self.dateEncodingStragegy = .deferredToDate
+    }
+    
+    fileprivate func makeDateFormatter() -> Formatter {
+        switch dateEncodingStragegy {
+            case .deferredToDate:
+                return DateFormatter()
+
+            case .iso8601:
+                return ISO8601DateFormatter()
+
+            case .custom(let dateFormatter):
+                return dateFormatter
+                
+            default:
+                fatalError("No formatter required for this strategy")
+
         }
     }
     
@@ -45,7 +72,8 @@ public class CSVEncoder: Encoder {
         try rows.encode(to: self)
         
         var result = Data()
-        if headings.count > 0 {
+        
+        if headerEncodingStrategy != .none {
             let header = self.headings.joined(separator: ",")
             if let data = "\(header)\n".data(using: .utf8) {
                 result.append(data)
@@ -56,6 +84,25 @@ public class CSVEncoder: Encoder {
         return result
     }
     
+    func writeDate(_ date: Date) {
+        switch dateEncodingStragegy {
+            case .deferredToDate:
+                writeField((dateFormatter as! DateFormatter).string(from: date))
+
+            case .secondsSince1970:
+                writeField("\(Int(date.timeIntervalSince1970))")
+
+            case .millisecondsSince1970:
+                writeField("\(Int(date.timeIntervalSince1970 * 1000.0))")
+
+            case .iso8601:
+                writeField((dateFormatter as! ISO8601DateFormatter).string(from: date))
+                
+            case .custom(let formatter):
+                writeField(formatter.string(from: date))
+        }
+    }
+
     func writeField(_ field: String) {
         fields.append(field)
     }

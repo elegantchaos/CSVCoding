@@ -19,16 +19,16 @@ struct CSVKeyedEncodingContainer<K>: KeyedEncodingContainerProtocol where K: Cod
     mutating func encodeNil(forKey key: K) throws {}
     
     mutating func encode<T>(_ value: T, forKey key: K) throws where T : Encodable {
-        if encoder.headingMode == .unfilled {
+        if encoder.headerEncodingStrategy == .auto {
             if encoder.headings.contains(key.stringValue) {
-                encoder.headingMode = .filled
+                encoder.headerEncodingStrategy = .manual
             } else {
                 encoder.headings.append(key.stringValue)
             }
         }
         
         if let date = value as? Date {
-            encoder.writeField(encoder.dateFormatter.string(from: date))
+            encoder.writeDate(date)
         } else if let string = value as? CustomStringConvertible {
             encoder.writeField(String(describing: string))
         }

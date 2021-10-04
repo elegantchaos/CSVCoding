@@ -10,34 +10,56 @@ import XCTestExtensions
 
 final class CSVEncoderTests: XCTestCase {
     struct Test: Codable {
-        var string = "String"
-        var int = 123
-        var double = 123.456
-        var bool = true
-        var date = Date(timeIntervalSinceReferenceDate: 0)
+        let string: String
+        let int: Int
+        let double: Double
+        let bool: Bool
+        let date: Date
+
+        internal init(string: String = "String", int: Int = 123, double: Double = 123.456, bool: Bool = true, date: Date = Date(timeIntervalSinceReferenceDate: 0)) {
+            self.string = string
+            self.int = int
+            self.double = double
+            self.bool = bool
+            self.date = date
+        }
     }
 
     func testAutoHeader() {
         let encoder = CSVEncoder()
+        encoder.dateEncodingStragegy = .iso8601
         let data = try! encoder.encode(rows: [Test()])
         let string = String(data: data, encoding: .utf8)
         XCTAssertEqual(string, """
             string,int,double,bool,date
-            String,123,123.456,true,2001-01-01 00:00:00.000
+            String,123,123.456,true,2001-01-01T00:00:00Z
 
             """)
     }
 
     func testAutoHeaderMultiple() {
         let encoder = CSVEncoder()
-        let data = try! encoder.encode(rows: [Test(), Test(), Test()])
+        encoder.dateEncodingStragegy = .iso8601
+        let data = try! encoder.encode(rows: [Test(), Test(date: Date(timeIntervalSinceReferenceDate: 1000)), Test(date: Date(timeIntervalSinceReferenceDate: 2000))])
         let string = String(data: data, encoding: .utf8)
         XCTAssertEqual(string, """
             string,int,double,bool,date
-            String,123,123.456,true,2001-01-01 00:00:00.000
-            String,123,123.456,true,2001-01-01 00:00:00.000
-            String,123,123.456,true,2001-01-01 00:00:00.000
+            String,123,123.456,true,2001-01-01T00:00:00Z
+            String,123,123.456,true,2001-01-01T00:16:40Z
+            String,123,123.456,true,2001-01-01T00:33:20Z
             
+            """)
+    }
+
+    func testNoHeader() {
+        let encoder = CSVEncoder()
+        encoder.dateEncodingStragegy = .iso8601
+        encoder.headerEncodingStrategy = .none
+        let data = try! encoder.encode(rows: [Test()])
+        let string = String(data: data, encoding: .utf8)
+        XCTAssertEqual(string, """
+            String,123,123.456,true,2001-01-01T00:00:00Z
+
             """)
     }
 
