@@ -10,9 +10,17 @@ import XCTestExtensions
 
 final class CSVEncoderTests: XCTestCase {
     func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-        XCTAssertEqual(CSVEncoder().text, "Hello, World!")
+        struct Test: Codable {
+            var string = "String"
+            var int = 123
+            var double = 123.456
+            var bool = true
+            var date = Date(timeIntervalSinceReferenceDate: 0)
+        }
+        
+        let encoder = CSVEncoder()
+        let data = try! encoder.encode(rows: [Test()])
+        let string = String(data: data, encoding: .utf8)
+        XCTAssertEqual(string, "String,123,123.456,true,2001-01-01 00:00:00.000,\n")
     }
 }
