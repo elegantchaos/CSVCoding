@@ -10,9 +10,16 @@ public class CSVEncoder: Encoder {
     public var userInfo: [CodingUserInfoKey : Any] = [:]
     internal let dateFormatter: DateFormatter
     
-    private var data = Data()
-    var headings: [String] = []
-    var gotHeadings = false
+    private var data: Data
+    var headings: [String]
+    var fields: [String]
+    
+    enum HeadingMode {
+        case unfilled
+        case filled
+    }
+
+    var headingMode: HeadingMode
 
     public static var dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -21,13 +28,21 @@ public class CSVEncoder: Encoder {
         return formatter
     }()
     
-    public init(dateFormatter: DateFormatter = CSVEncoder.dateFormatter) {
+    public init(headings: [String]? = nil, dateFormatter: DateFormatter = CSVEncoder.dateFormatter) {
         self.dateFormatter = dateFormatter
+        self.fields = []
+        self.data = Data()
+        if let headings = headings {
+            self.headings = headings
+            self.headingMode = .filled
+        } else {
+            self.headings = []
+            self.headingMode = .unfilled
+        }
     }
     
     public func encode<T: Encodable>(rows: T) throws -> Data {
         try rows.encode(to: self)
-        
         
         var result = Data()
         if headings.count > 0 {
@@ -41,8 +56,14 @@ public class CSVEncoder: Encoder {
         return result
     }
     
-    func write(_ string: String) {
-        data.append(string.data(using: .utf8)!)
+    func writeField(_ field: String) {
+        fields.append(field)
+    }
+
+    func writeRecord() {
+        let line = fields.joined(separator: ",")
+        data.append("\(line)\n".data(using: .utf8)!)
+        fields = []
     }
     
     public func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
@@ -58,38 +79,5 @@ public class CSVEncoder: Encoder {
     }
     
     
-    private struct CSVUnkeyedEncodingContainer: UnkeyedEncodingContainer {
-        
-        var codingPath: [CodingKey] = []
-        var count: Int = 0
-        
-        private let encoder: CSVEncoder
-        
-        init(encoder: CSVEncoder) {
-            self.encoder = encoder
-        }
-        
-        mutating func encode<T>(_ value: T) throws where T : Encodable {
-            try value.encode(to: encoder)
-            encoder.write("\n")
-            count += 1
-        }
-        
-        mutating func encodeNil() throws {
-        }
-        
-        mutating func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> where NestedKey : CodingKey {
-            return encoder.container(keyedBy: keyType)
-        }
-        
-        mutating func nestedUnkeyedContainer() -> UnkeyedEncodingContainer {
-            return self
-        }
-        
-        mutating func superEncoder() -> Encoder {
-            return encoder
-        }
-        
-    }
     
 }
