@@ -16,6 +16,10 @@ public class CSVEncoder: Encoder {
     static let deferredFormatter = DateFormatter()
     static let isoFormatter = ISO8601DateFormatter()
     
+    enum CSVEncodingError: Error {
+        case wrongNumberOfHeaders([String])
+    }
+    
     enum DateEncodingStrategy {
         case deferredToDate
         case secondsSince1970
@@ -30,10 +34,18 @@ public class CSVEncoder: Encoder {
         case manual
     }
 
+    /// Whether, and how, to generate headings.
     var headerEncodingStrategy: HeaderEncodingStrategy
-    var dateEncodingStragegy: DateEncodingStrategy
+    
+    /// If this is set, we use the bundle to look up translations
+    /// for the headings. These should be given in the form: `csv.heading.<key>`,
+    /// where key is the name of the heading.
+    var headingBundle: Bundle?
 
-    public init(headings: [String]? = nil) {
+    /// How to encode dates.
+    var dateEncodingStragegy: DateEncodingStrategy
+    
+    public init(headings: [String]? = nil, headingBundle: Bundle? = nil) {
         self.fields = []
         self.data = Data()
         if let headings = headings {
@@ -44,6 +56,7 @@ public class CSVEncoder: Encoder {
             self.headerEncodingStrategy = .auto
         }
         self.dateEncodingStragegy = .deferredToDate
+        self.headingBundle = headingBundle
     }
     
     public func encode<T: Encodable>(rows: T, headers: [String]? = nil) throws -> Data {
@@ -94,9 +107,20 @@ public class CSVEncoder: Encoder {
         fields.append(field)
     }
 
-    func writeRecord() {
+    func writeRecord() throws {
         if headerEncodingStrategy != .none {
-            let line = headers.joined(separator: ",")
+            guard headers.count == fields.count else {
+                throw CSVEncodingError.wrongNumberOfHeaders(headers)
+            }
+            
+            let translatedHeaders: [String]
+            if let bundle = headingBundle {
+                translatedHeaders = headers.map { NSLocalizedString("csv.header.\($0)", bundle: bundle, comment: "")}
+            } else {
+                translatedHeaders = headers
+            }
+            
+            let line = translatedHeaders.joined(separator: ",")
             data.append("\(line)\n".data(using: .utf8)!)
             headerEncodingStrategy = .none
         }

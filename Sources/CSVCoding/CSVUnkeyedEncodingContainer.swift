@@ -18,7 +18,7 @@ struct CSVUnkeyedEncodingContainer: UnkeyedEncodingContainer {
     
     mutating func encode<T>(_ value: T) throws where T : Encodable {
         try value.encode(to: encoder)
-        encoder.writeRecord()
+        try encoder.writeRecord()
         count += 1
     }
     
