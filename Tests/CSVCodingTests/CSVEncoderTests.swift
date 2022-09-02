@@ -92,12 +92,26 @@ final class CSVEncoderTests: XCTestCase {
     func testHeaderTranslation() {
         // we're supplying the main bundle to use for localization of the header
         // it doesn't actually contain a translation in this case - so we should end up seeing the raw keys
-        let encoder = CSVEncoder(headingBundle: Bundle.main)
+        let encoder = CSVEncoder(translator: CSVHeaderTranslator())
         encoder.dateEncodingStragegy = .iso8601
         let data = try! encoder.encode(rows: [Test()])
         let string = String(data: data, encoding: .utf8)!
         XCTAssertEqual(string, """
             csv.header.string,csv.header.int,csv.header.double,csv.header.bool,csv.header.date,csv.header.enum
+            String,123,123.456,true,2001-01-01T00:00:00Z,a
+            
+            """)
+    }
+    
+    func testHeaderTranslationCustomPrefix() {
+        // we're supplying the main bundle to use for localization of the header
+        // it doesn't actually contain a translation in this case - so we should end up seeing the raw keys
+        let encoder = CSVEncoder(translator: CSVHeaderTranslator(prefix: "wibble"))
+        encoder.dateEncodingStragegy = .iso8601
+        let data = try! encoder.encode(rows: [Test()])
+        let string = String(data: data, encoding: .utf8)!
+        XCTAssertEqual(string, """
+            wibble.string,wibble.int,wibble.double,wibble.bool,wibble.date,wibble.enum
             String,123,123.456,true,2001-01-01T00:00:00Z,a
             
             """)
